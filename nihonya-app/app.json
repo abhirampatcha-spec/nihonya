@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "nihonya-app",
+    "slug": "nihonya-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/nihonya_logo.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/nihonya_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F4F1EC"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/nihonya_logo.png",
+        "backgroundColor": "#F4F1EC"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/nihonya_logo.png"
+    }
+  }
+}
