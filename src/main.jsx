@@ -15,26 +15,39 @@ import Cart from "./src/pages/cart";
 import Checkout from "./src/pages/checkout";
 import { CartProvider } from "./src/context/CartContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
+import { AuthProvider } from "./src/context/AuthContext";
+import Login from "./src/pages/login";
+import Account from "./src/pages/account";
+import Orders from "./src/pages/orders";
+import Addresses from "./src/pages/addresses";
+import Contact from "./src/pages/contact";
 import Navbar from "./components/Navbar";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <CartProvider>
-        <FavoritesProvider>
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<App />} />
-            <Route path="/products" element={<Products />} />
-            <Route
-              path="/product/:id"
-              element={<ProductDetails />}
-            />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<Checkout />} />
-          </Routes>
-        </FavoritesProvider>
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <FavoritesProvider>
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<App />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/account" element={<Account />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/addresses" element={<Addresses />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route
+                path="/product/:id"
+                element={<ProductDetails />}
+              />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+            </Routes>
+          </FavoritesProvider>
+        </CartProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
