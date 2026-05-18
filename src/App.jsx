@@ -127,7 +127,7 @@ export default function App() {
         <div className="max-w-2xl">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div className="inline-flex items-center gap-4 rounded-[30px] bg-white px-5 py-3 shadow-sm">
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-black text-3xl font-black text-white">
+                <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-black text-4xl font-black text-white">
                   N
                 </div>
               <div>
