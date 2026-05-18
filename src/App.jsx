@@ -59,18 +59,12 @@ export default function App() {
       setLookbookIndex((i) => (i + 1) % max);
     }, 3000);
     return () => clearInterval(id);
-  }, [showLookbook, productsData]);
+  }, [showLookbook, productsData, lookbookPaused]);
 
-  const openPinterest = async () => {
-    try {
-      const res = await fetch("/api/links");
-      if (!res.ok) return;
-      const links = await res.json();
-      const p = links.find((l) => l.url && l.url.includes("pinterest"));
-      if (p && p.url) window.open(p.url, "_blank");
-    } catch (e) {
-      // ignore
-    }
+  const pinterestUrl = "https://www.pinterest.com/nihonya/furniture";
+
+  const openPinterest = () => {
+    window.open(pinterestUrl, "_blank");
   };
 
   useEffect(() => {
@@ -209,12 +203,18 @@ export default function App() {
       </section>
 
       {showLookbook && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
-          <div className="w-full max-w-5xl bg-white rounded-[20px] overflow-hidden shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+          onClick={() => setShowLookbook(false)}
+        >
+          <div
+            className="w-full max-w-5xl bg-white rounded-[20px] overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="relative">
               <button
                 onClick={() => setShowLookbook(false)}
-                className="absolute top-4 right-4 rounded-full bg-white px-4 py-2 border"
+                className="absolute top-4 right-4 rounded-full bg-white px-4 py-2 border shadow-sm hover:bg-neutral-100"
               >
                 Close
               </button>
