@@ -12,6 +12,7 @@ import {
   Pressable,
   Platform,
 } from "react-native";
+import Constants from "expo-constants";
 import { products as localProducts } from "../src/shared/data/products";
 import { categories } from "../src/shared/constants/categories";
 import {
@@ -30,12 +31,47 @@ const screens = {
   FAVORITES: "favorites",
   PROFILE: "profile",
   CHECKOUT: "checkout",
+  PAYMENT: "payment",
+  ORDER_CONFIRMATION: "orderConfirmation",
 };
 
-const BACKEND_HOSTS =
+const backendPort = 4000;
+const getExpoBackendHost = () => {
+  if (Platform.OS === "web") {
+    const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+    return `http://${host}:${backendPort}`;
+  }
+
+  const manifest = Constants.manifest || Constants.manifest2;
+  const debuggerHost = manifest?.debuggerHost;
+  if (debuggerHost) {
+    const host = debuggerHost.split(":")[0];
+    if (host) {
+      return `http://${host}:${backendPort}`;
+    }
+  }
+
+  const bundleUrl = manifest?.bundleUrl || Constants.experienceUrl;
+  if (bundleUrl) {
+    const match = bundleUrl.match(/^https?:\/\/([^:/]+)(?::(\d+))?/);
+    if (match) {
+      const host = match[1];
+      return `http://${host}:${backendPort}`;
+    }
+  }
+
+  return null;
+};
+
+const BACKEND_HOSTS_BASE =
   Platform.OS === "android"
-    ? ["http://10.0.2.2:4000", "http://127.0.0.1:4000"]
+    ? ["http://10.0.2.2:4000", "http://10.0.3.2:4000", "http://127.0.0.1:4000", "http://localhost:4000"]
     : ["http://localhost:4000", "http://127.0.0.1:4000"];
+
+const expoBackendHost = getExpoBackendHost();
+const BACKEND_HOSTS = expoBackendHost
+  ? [expoBackendHost, ...BACKEND_HOSTS_BASE]
+  : BACKEND_HOSTS_BASE;
 
 export default function App() {
   const [screen, setScreen] = useState(screens.HOME);
@@ -49,11 +85,14 @@ export default function App() {
   const [products, setProducts] = useState(localProducts);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [orderConfirmation, setOrderConfirmation] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState(null);
-  const [detailProduct, setDetailProduct] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [orderReference, setOrderReference] = useState(null);
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [orderCoupon, setOrderCoupon] = useState(null);
+  const [orderTotal, setOrderTotal] = useState(0);
+  const [orderSavedAmount, setOrderSavedAmount] = useState(0);
+  const [orderPayableAmount, setOrderPayableAmount] = useState(0);
+  const [backendHostUsed, setBackendHostUsed] = useState(null);
 
   const bankOffers = [
     { label: "HDFC Bank", discount: "5% off" },
@@ -61,22 +100,52 @@ export default function App() {
     { label: "SBI Card", discount: "EMI 6 months" },
   ];
 
+  const coupons = [
+    {
+      code: "NIHONYA25",
+      label: "Launch Offer",
+      description: "Flat 25% off on your order",
+      discount: 0.25,
+    },
+    {
+      code: "HDFC5",
+      label: "HDFC Savings",
+      description: "5% off with HDFC bank",
+      discount: 0.05,
+    },
+    {
+      code: "ICICI4",
+      label: "ICICI Cashback",
+      description: "4% off with ICICI card",
+      discount: 0.04,
+    },
+  ];
+
+  const getDiscountValue = (total) => {
+    if (!selectedCoupon) return 0;
+    return Math.round(total * selectedCoupon.discount);
+  };
+
+  const getPayableTotal = (total) => {
+    return total - getDiscountValue(total);
+  };
 
   const formatINR = (value) => `₹${Number(value).toLocaleString("en-IN")}`;
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError(null);
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
 
-      try {
-let response = null;
+    try {
+      let response = null;
+      let successfulHost = null;
       for (const host of BACKEND_HOSTS) {
         try {
           response = await fetch(`${host}/api/products`);
           if (!response.ok) {
             continue;
           }
+          successfulHost = host;
           break;
         } catch (fetchError) {
           response = null;
@@ -84,83 +153,25 @@ let response = null;
       }
 
       if (!response || !response.ok) {
-          throw new Error("Unable to load products from backend");
-        }
-
-        const data = await response.json();
-        setProducts(data);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to load products";
-        setError(message);
-        setProducts(localProducts);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  const retryFetchProducts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      let response = null;
-      for (const host of BACKEND_HOSTS) {
-        try {
-          response = await fetch(`${host}/api/products`);
-          if (!response.ok) continue;
-          break;
-        } catch (e) {
-          response = null;
-        }
+        throw new Error("Unable to load products from backend");
       }
 
-      if (!response || !response.ok) throw new Error("Unable to load products from backend");
       const data = await response.json();
       setProducts(data);
+      setBackendHostUsed(successfulHost);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load products";
-      setError(message);
+      setError(`Backend unavailable — using local products. ${message}`);
       setProducts(localProducts);
+      setBackendHostUsed(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProductById = async (id) => {
-    setDetailLoading(true);
-    setDetailError(null);
-    setDetailProduct(null);
-    try {
-      let response = null;
-      for (const host of BACKEND_HOSTS) {
-        try {
-          response = await fetch(`${host}/api/products/${id}`);
-          if (!response.ok) continue;
-          break;
-        } catch (e) {
-          response = null;
-        }
-      }
-
-      if (!response || !response.ok) throw new Error("Unable to load product from backend");
-      const data = await response.json();
-      setDetailProduct(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load product";
-      setDetailError(message);
-      setDetailProduct(selectedProduct || null);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (screen !== screens.DETAILS) return;
-    if (!selectedProduct || !selectedProduct.id) return;
-    fetchProductById(selectedProduct.id);
-  }, [screen, selectedProduct]);
+    fetchProducts();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return products
@@ -199,6 +210,21 @@ let response = null;
 
   const clearCart = () => {
     setCartItems(clearCartHelper());
+  };
+
+  const placeOrder = (method) => {
+    const reference = `NH-${Date.now().toString().slice(-6)}`;
+    const discount = getDiscountValue(subtotal);
+    const payable = getPayableTotal(subtotal);
+
+    setPaymentMethod(method);
+    setOrderReference(reference);
+    setOrderCoupon(selectedCoupon);
+    setOrderTotal(subtotal);
+    setOrderSavedAmount(discount);
+    setOrderPayableAmount(payable);
+    clearCart();
+    setScreen(screens.ORDER_CONFIRMATION);
   };
 
   const toggleFavorite = (itemId) => {
@@ -438,23 +464,31 @@ let response = null;
             marginTop: 20,
             padding: 16,
             borderRadius: 24,
-            backgroundColor: "#fee2e2",
+            backgroundColor: "#fef3c7",
           }}
         >
           <Text style={{ color: "#92400e", fontWeight: "700" }}>
-            Local backend unreachable
+            Backend unavailable — using local products
           </Text>
           <Text style={{ color: "#92400e", marginTop: 8 }}>
             {error}
           </Text>
-          <View style={{ flexDirection: "row", marginTop: 12 }}>
-            <TouchableOpacity onPress={retryFetchProducts} style={{ backgroundColor: "#111", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, marginRight: 8 }}>
-              <Text style={{ color: "#fff", fontWeight: "700" }}>Retry</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setError(null)} style={{ backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: "#E8E1D8" }}>
-              <Text style={{ color: "#111", fontWeight: "700" }}>Dismiss</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={{ color: "#92400e", marginTop: 8, fontSize: 12 }}>
+            {backendHostUsed ? `Last connected to ${backendHostUsed}` : "Attempting to connect to local backend on port 4000."}
+          </Text>
+          <TouchableOpacity
+            onPress={fetchProducts}
+            style={{
+              marginTop: 14,
+              alignSelf: "flex-start",
+              backgroundColor: "#92400e",
+              paddingVertical: 10,
+              paddingHorizontal: 20,
+              borderRadius: 20,
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700" }}>Retry backend</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -873,10 +907,48 @@ let response = null;
           ))}
           <Text style={{ marginTop: 10, color: "#777" }}>Total</Text>
           <Text style={{ fontSize: 32, fontWeight: "900", marginTop: 10 }}>{formatINR(subtotal)}</Text>
+          <View style={{ marginTop: 22, padding: 18, borderRadius: 24, backgroundColor: "#F4F1EC" }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: "#111" }}>Available offers</Text>
+            {coupons.map((coupon) => (
+              <TouchableOpacity
+                key={coupon.code}
+                onPress={() => setSelectedCoupon(coupon)}
+                style={{
+                  marginTop: 12,
+                  borderRadius: 24,
+                  padding: 14,
+                  backgroundColor: selectedCoupon?.code === coupon.code ? "#111" : "#fff",
+                  borderWidth: 1,
+                  borderColor: selectedCoupon?.code === coupon.code ? "#111" : "#E5E7EB",
+                }}
+              >
+                <Text style={{ color: selectedCoupon?.code === coupon.code ? "#fff" : "#111", fontWeight: "700" }}>
+                  {coupon.label} — {coupon.code}
+                </Text>
+                <Text style={{ marginTop: 4, color: selectedCoupon?.code === coupon.code ? "#D1D5DB" : "#555" }}>
+                  {coupon.description}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {selectedCoupon ? (
+            <View style={{ marginTop: 20, padding: 18, borderRadius: 24, backgroundColor: "#EEF2FF" }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: "#3730A3" }}>
+                Coupon applied: {selectedCoupon.code}
+              </Text>
+              <Text style={{ marginTop: 8, color: "#4B5563" }}>
+                Save {Math.round(selectedCoupon.discount * 100)}% on your order.
+              </Text>
+              <Text style={{ marginTop: 12, color: "#111", fontSize: 24, fontWeight: "900" }}>
+                Payable now: {formatINR(getPayableTotal(subtotal))}
+              </Text>
+            </View>
+          ) : null}
+          <Text style={{ marginTop: 20, color: "#555", fontSize: 14 }}>
+            Apply an offer and continue to payment to complete your order.
+          </Text>
           <TouchableOpacity
-            onPress={() => {
-              setShowPaymentModal(true);
-            }}
+            onPress={() => setScreen(screens.PAYMENT)}
             style={{
               marginTop: 25,
               backgroundColor: "#111",
@@ -885,10 +957,119 @@ let response = null;
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "700" }}>Place Order</Text>
+            <Text style={{ color: "#fff", fontWeight: "700" }}>Continue to Payment</Text>
           </TouchableOpacity>
         </View>
       )}
+    </View>
+  );
+
+  const renderPayment = () => (
+    <View style={{ paddingHorizontal: 25, paddingBottom: 120 }}>
+      <TouchableOpacity
+        onPress={() => setScreen(screens.CHECKOUT)}
+        style={{ marginTop: 30, marginBottom: 20 }}
+      >
+        <Text style={{ color: "#111", fontWeight: "700" }}>← Back to Checkout</Text>
+      </TouchableOpacity>
+
+      <Text style={{ fontSize: 28, fontWeight: "900", color: "#111" }}>Payment Methods</Text>
+      <Text style={{ marginTop: 10, color: "#777", fontSize: 16, lineHeight: 24 }}>
+        Select a way to pay. Cash on Delivery is available for your order.
+      </Text>
+
+      <View style={{ marginTop: 25, backgroundColor: "#fff", borderRadius: 30, padding: 20 }}>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "#111" }}>Order total</Text>
+        <Text style={{ marginTop: 10, fontSize: 32, fontWeight: "900" }}>{formatINR(getPayableTotal(subtotal))}</Text>
+        {selectedCoupon ? (
+          <Text style={{ marginTop: 8, color: "#16A34A" }}>
+            Coupon {selectedCoupon.code} saved {formatINR(getDiscountValue(subtotal))}
+          </Text>
+        ) : null}
+
+        <TouchableOpacity
+          onPress={() => placeOrder("Cash on Delivery")}
+          style={{
+            marginTop: 24,
+            backgroundColor: "#111",
+            paddingVertical: 18,
+            borderRadius: 30,
+            alignItems: "center",
+            marginBottom: 14,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Place Order with COD</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => placeOrder("Card / UPI")}
+          style={{
+            backgroundColor: "#F4F1EC",
+            paddingVertical: 18,
+            borderRadius: 30,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#111", fontWeight: "700" }}>Pay Now (Dummy)</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderOrderConfirmation = () => (
+    <View style={{ paddingHorizontal: 25, paddingBottom: 120 }}>
+      <Text style={{ marginTop: 30, color: "#111", fontWeight: "700", marginBottom: 20, fontSize: 28 }}>
+        Order Confirmed
+      </Text>
+      <View style={{ backgroundColor: "#fff", borderRadius: 30, padding: 25 }}>
+        <Text style={{ fontSize: 18, color: "#777" }}>Payment method</Text>
+        <Text style={{ fontSize: 24, fontWeight: "900", marginTop: 8 }}>{paymentMethod || "Cash on Delivery"}</Text>
+
+        <Text style={{ marginTop: 24, fontSize: 18, color: "#777" }}>Order reference</Text>
+        <Text style={{ fontSize: 24, fontWeight: "900", marginTop: 8 }}>{orderReference}</Text>
+        <Text style={{ marginTop: 16, fontSize: 18, color: "#777" }}>Order total</Text>
+        <Text style={{ fontSize: 24, fontWeight: "900", marginTop: 8 }}>{formatINR(orderTotal)}</Text>
+        {orderSavedAmount > 0 ? (
+          <Text style={{ marginTop: 8, color: "#16A34A", fontWeight: "700" }}>
+            You saved {formatINR(orderSavedAmount)}
+          </Text>
+        ) : null}
+        <Text style={{ marginTop: 16, fontSize: 18, color: "#777" }}>Payable amount</Text>
+        <Text style={{ fontSize: 24, fontWeight: "900", marginTop: 8 }}>{formatINR(orderPayableAmount)}</Text>
+        {orderCoupon ? (
+          <View style={{ marginTop: 18, padding: 16, borderRadius: 24, backgroundColor: "#EEF2FF" }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#3730A3" }}>Coupon used</Text>
+            <Text style={{ marginTop: 8, fontSize: 18, fontWeight: "800" }}>{orderCoupon.code}</Text>
+            <Text style={{ marginTop: 6, color: "#4B5563" }}>{orderCoupon.description}</Text>
+          </View>
+        ) : null}
+
+        <Text style={{ marginTop: 24, color: "#111", fontWeight: "700", fontSize: 18 }}>
+          Your order has been placed successfully.
+        </Text>
+        <Text style={{ marginTop: 10, color: "#555", lineHeight: 22 }}>
+          We will contact you soon to confirm delivery details. Thank you for shopping with Nihonya.
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => {
+            setPaymentMethod(null);
+            setOrderReference(null);
+            setOrderCoupon(null);
+            setSelectedCoupon(null);
+            setScreen(screens.HOME);
+          }}
+          style={{
+            marginTop: 25,
+            backgroundColor: "#111",
+            paddingVertical: 18,
+            borderRadius: 30,
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Continue Shopping</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -904,6 +1085,10 @@ let response = null;
         return renderProfile();
       case screens.CHECKOUT:
         return renderCheckout();
+      case screens.PAYMENT:
+        return renderPayment();
+      case screens.ORDER_CONFIRMATION:
+        return renderOrderConfirmation();
       default:
         return renderHome();
     }
@@ -914,91 +1099,7 @@ let response = null;
       <ScrollView showsVerticalScrollIndicator={false}>{renderContent()}</ScrollView>
       {renderLaunchModal()}
 
-      {/* Payment modal */}
-      <Modal visible={showPaymentModal} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "center", padding: 20 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 20 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800" }}>Choose payment method</Text>
-            <Text style={{ marginTop: 10, color: "#777" }}>Total: {formatINR(subtotal)}</Text>
-
-            <View style={{ marginTop: 18 }}>
-              <Pressable onPress={() => {
-                // Simulate cash on delivery order placement
-                const order = {
-                  id: `ORD-${Date.now()}`,
-                  items: cartItems,
-                  total: subtotal,
-                  method: 'Cash on Delivery',
-                  status: 'Placed',
-                  createdAt: new Date().toISOString(),
-                };
-                clearCart();
-                setShowPaymentModal(false);
-                setOrderConfirmation(order);
-                setScreen(screens.HOME);
-              }} style={{ paddingVertical: 14, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "#F4F1EC", marginBottom: 12 }}>
-                <Text style={{ fontWeight: "700" }}>Cash on Delivery</Text>
-                <Text style={{ color: "#555", marginTop: 6 }}>Pay when the order arrives</Text>
-              </Pressable>
-
-              <Pressable onPress={() => {
-                // For non-COD options we just show a message for now
-                setShowPaymentModal(false);
-                setOrderConfirmation({ id: null, message: 'Online payments are not enabled in this demo.' });
-              }} style={{ paddingVertical: 14, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E8E1D8" }}>
-                <Text style={{ fontWeight: "700" }}>Pay with UPI / Card (Demo)</Text>
-                <Text style={{ color: "#555", marginTop: 6 }}>Simulate an online payment flow</Text>
-              </Pressable>
-            </View>
-
-            <Pressable onPress={() => setShowPaymentModal(false)} style={{ marginTop: 18, alignItems: "center" }}>
-              <Text style={{ color: "#111", fontWeight: "700" }}>Cancel</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Order confirmation modal */}
-      <Modal visible={!!orderConfirmation} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "center", alignItems: "center", padding: 20 }}>
-          <View style={{ width: "100%", maxWidth: 420, backgroundColor: "#fff", borderRadius: 20, padding: 20 }}>
-            {orderConfirmation && orderConfirmation.id ? (
-              <>
-                <Text style={{ fontSize: 22, fontWeight: "800" }}>Order Placed</Text>
-                <Text style={{ marginTop: 10, color: "#555" }}>Your order {orderConfirmation.id} has been placed.</Text>
-                <Text style={{ marginTop: 8, color: "#777" }}>Amount: {formatINR(orderConfirmation.total)}</Text>
-              </>
-            ) : (
-              <>
-                <Text style={{ fontSize: 20, fontWeight: "800" }}>Notice</Text>
-                <Text style={{ marginTop: 10, color: "#555" }}>{orderConfirmation && orderConfirmation.message}</Text>
-              </>
-            )}
-
-            <Pressable onPress={() => setOrderConfirmation(null)} style={{ marginTop: 18, backgroundColor: "#111", paddingVertical: 14, borderRadius: 12, alignItems: "center" }}>
-              <Text style={{ color: "#fff", fontWeight: "700" }}>OK</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
       <View
-        style={{
-          position: "absolute",
-          bottom: 20,
-          left: 20,
-          right: 20,
-          backgroundColor: "#fff",
-          borderRadius: 30,
-          height: 70,
-          flexDirection: "row",
-          justifyContent: "space-around",
-          alignItems: "center",
-          shadowColor: "#000",
-          shadowOpacity: 0.08,
-          shadowRadius: 16,
-          elevation: 8,
-        }}
         style={{
           position: "absolute",
           bottom: 20,
