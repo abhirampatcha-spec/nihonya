@@ -199,9 +199,10 @@ export default function App() {
             <div className="relative">
               <button
                 onClick={() => setShowLookbook(false)}
-                className="absolute top-4 right-4 rounded-full bg-white px-4 py-2 border shadow-sm hover:bg-neutral-100"
+                aria-label="Close lookbook"
+                className="absolute top-4 right-4 rounded-full bg-white w-10 h-10 flex items-center justify-center text-xl border shadow-sm hover:bg-neutral-100"
               >
-                Close
+                ✕
               </button>
 
               <div
@@ -259,13 +260,6 @@ export default function App() {
                     className="px-4 py-2 bg-black text-white rounded"
                   >
                     Next
-                  </button>
-
-                  <button
-                    onClick={() => setShowLookbook(false)}
-                    className="px-4 py-2 border rounded"
-                  >
-                    Close Window
                   </button>
                 </div>
               </div>
