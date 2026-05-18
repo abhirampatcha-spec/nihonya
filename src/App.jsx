@@ -13,6 +13,7 @@ export default function App() {
   const [productError, setProductError] = useState(null);
   const [showLookbook, setShowLookbook] = useState(false);
   const [lookbookIndex, setLookbookIndex] = useState(0);
+  const [lookbookPaused, setLookbookPaused] = useState(false);
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toggleFavorite, favoriteIds } = useFavorites();
@@ -53,6 +54,7 @@ export default function App() {
   useEffect(() => {
     if (!showLookbook) return;
     const max = Math.min(productsData.length, 9) || 1;
+    if (lookbookPaused) return;
     const id = setInterval(() => {
       setLookbookIndex((i) => (i + 1) % max);
     }, 3000);
@@ -70,6 +72,17 @@ export default function App() {
       // ignore
     }
   };
+
+  useEffect(() => {
+    if (!showLookbook) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setShowLookbook(false);
+      if (e.key === "ArrowRight") setLookbookIndex((i) => (i + 1) % Math.max(1, Math.min(productsData.length, 9)));
+      if (e.key === "ArrowLeft") setLookbookIndex((i) => (i - 1 + Math.max(1, Math.min(productsData.length, 9))) % Math.max(1, Math.min(productsData.length, 9)));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showLookbook, productsData]);
 
   const featuredProducts = productsData
     .filter((item) => selected === "All" || item.category === selected)
@@ -114,9 +127,9 @@ export default function App() {
         <div className="max-w-2xl">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div className="inline-flex items-center gap-4 rounded-[30px] bg-white px-5 py-3 shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-black text-lg font-black text-white">
-                N
-              </div>
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-black text-2xl font-black text-white">
+                  N
+                </div>
               <div>
                 <p className="font-black text-xl">Nihonya</p>
                 <p className="text-sm text-neutral-500">Japanese furniture in India</p>
@@ -206,16 +219,36 @@ export default function App() {
                 Close
               </button>
 
-              <div className="h-[520px] bg-[#EFEAE4] flex items-center justify-center">
+              <div
+                className="h-[520px] bg-[#EFEAE4] flex items-center justify-center relative overflow-hidden"
+                onMouseEnter={() => setLookbookPaused(true)}
+                onMouseLeave={() => setLookbookPaused(false)}
+              >
                 {productsData && productsData.length > 0 ? (
                   <img
                     src={productsData[lookbookIndex % productsData.length].image}
                     alt={productsData[lookbookIndex % productsData.length].name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-opacity duration-500"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="text-center text-neutral-500">No lookbook items</div>
                 )}
+
+                {/* thumbnails / indicators */}
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 items-center">
+                  {productsData.slice(0, Math.min(productsData.length, 9)).map((p, idx) => (
+                    <button
+                      key={p.id || idx}
+                      onClick={() => setLookbookIndex(idx)}
+                      className={`w-16 h-12 rounded overflow-hidden border ${lookbookIndex === idx ? "ring-2 ring-black" : "ring-0"}`}
+                      title={p.name}
+                    >
+                      <img src={p.image} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+
               </div>
 
               <div className="p-6 flex items-center justify-between">
