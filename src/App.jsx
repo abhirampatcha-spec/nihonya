@@ -61,12 +61,6 @@ export default function App() {
     return () => clearInterval(id);
   }, [showLookbook, productsData, lookbookPaused]);
 
-  const pinterestUrl = "https://www.pinterest.com/nihonya/furniture";
-
-  const openPinterest = () => {
-    window.open(pinterestUrl, "_blank");
-  };
-
   useEffect(() => {
     if (!showLookbook) return;
     const onKey = (e) => {
@@ -268,10 +262,10 @@ export default function App() {
                   </button>
 
                   <button
-                    onClick={openPinterest}
+                    onClick={() => setShowLookbook(false)}
                     className="px-4 py-2 border rounded"
                   >
-                    Open Pinterest
+                    Close Window
                   </button>
                 </div>
               </div>
