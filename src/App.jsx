@@ -120,14 +120,6 @@ export default function App() {
       <section className="min-h-screen flex flex-col lg:flex-row items-center justify-between px-8 lg:px-20 pt-40 gap-20">
         <div className="max-w-2xl">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-            <div className="inline-flex items-center gap-4 rounded-[30px] bg-white px-5 py-3 shadow-sm">
-                <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-black text-4xl font-black text-white">
-                  N
-                </div>
-              <div>
-                <p className="font-black text-xl">Nihonya</p>
-              </div>
-            </div>
             <div className="rounded-full bg-yellow-200 px-4 py-3 text-sm font-semibold text-neutral-800">
               Launch Offer: Flat 25% off selected products
             </div>
