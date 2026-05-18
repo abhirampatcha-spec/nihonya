@@ -126,7 +126,6 @@ export default function App() {
                 </div>
               <div>
                 <p className="font-black text-xl">Nihonya</p>
-                <p className="text-sm text-neutral-500">Japanese furniture in India</p>
               </div>
             </div>
             <div className="rounded-full bg-yellow-200 px-4 py-3 text-sm font-semibold text-neutral-800">
