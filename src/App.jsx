@@ -11,6 +11,8 @@ export default function App() {
   const [productsData, setProductsData] = useState(products);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productError, setProductError] = useState(null);
+  const [showLookbook, setShowLookbook] = useState(false);
+  const [lookbookIndex, setLookbookIndex] = useState(0);
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toggleFavorite, favoriteIds } = useFavorites();
@@ -47,6 +49,27 @@ export default function App() {
 
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    if (!showLookbook) return;
+    const max = Math.min(productsData.length, 9) || 1;
+    const id = setInterval(() => {
+      setLookbookIndex((i) => (i + 1) % max);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [showLookbook, productsData]);
+
+  const openPinterest = async () => {
+    try {
+      const res = await fetch("/api/links");
+      if (!res.ok) return;
+      const links = await res.json();
+      const p = links.find((l) => l.url && l.url.includes("pinterest"));
+      if (p && p.url) window.open(p.url, "_blank");
+    } catch (e) {
+      // ignore
+    }
+  };
 
   const featuredProducts = productsData
     .filter((item) => selected === "All" || item.category === selected)
@@ -139,7 +162,10 @@ export default function App() {
             Explore Collection
           </Link>
 
-          <button className="bg-white px-8 py-4 rounded-full border border-black/10">
+          <button
+            className="bg-white px-8 py-4 rounded-full border border-black/10"
+            onClick={() => setShowLookbook(true)}
+          >
             View Lookbook
           </button>
           </div>
@@ -168,6 +194,67 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      {showLookbook && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
+          <div className="w-full max-w-5xl bg-white rounded-[20px] overflow-hidden shadow-2xl">
+            <div className="relative">
+              <button
+                onClick={() => setShowLookbook(false)}
+                className="absolute top-4 right-4 rounded-full bg-white px-4 py-2 border"
+              >
+                Close
+              </button>
+
+              <div className="h-[520px] bg-[#EFEAE4] flex items-center justify-center">
+                {productsData && productsData.length > 0 ? (
+                  <img
+                    src={productsData[lookbookIndex % productsData.length].image}
+                    alt={productsData[lookbookIndex % productsData.length].name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center text-neutral-500">No lookbook items</div>
+                )}
+              </div>
+
+              <div className="p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold">
+                    {productsData[lookbookIndex]?.name}
+                  </h3>
+                  <p className="text-neutral-500 mt-2 max-w-lg">
+                    {productsData[lookbookIndex]?.description}
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setLookbookIndex((i) => (i - 1 + Math.min(productsData.length, 9)) % Math.min(productsData.length, 9))}
+                    className="px-4 py-2 border rounded"
+                  >
+                    Prev
+                  </button>
+
+                  <button
+                    onClick={() => setLookbookIndex((i) => (i + 1) % Math.min(productsData.length, 9))}
+                    className="px-4 py-2 bg-black text-white rounded"
+                  >
+                    Next
+                  </button>
+
+                  <button
+                    onClick={openPinterest}
+                    className="px-4 py-2 border rounded"
+                  >
+                    Open Pinterest
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CATEGORIES */}
       <section className="px-8 lg:px-20 pb-10">
