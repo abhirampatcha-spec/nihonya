@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
@@ -26,9 +26,14 @@ export default function Login() {
         <label className="block mb-2 text-sm">Password</label>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mb-6 px-4 py-3 border rounded" />
 
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-6">
           <button className="bg-black text-white px-6 py-3 rounded">Sign in</button>
           <a className="text-sm text-neutral-500" href="#">Forgot?</a>
+        </div>
+
+        <p className="text-sm text-neutral-500 mb-4">New here? <Link to="/signup" className="text-black font-medium">Create an account</Link></p>
+        <div className="border-t border-neutral-200 pt-4 text-sm text-neutral-500">
+          Or sign up directly if you don’t have an account yet.
         </div>
       </form>
     </div>

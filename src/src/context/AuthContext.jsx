@@ -18,7 +18,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = (username) => {
     // simple client-side mock login
-    setUser({ username });
+    setUser({ username, provider: "local" });
+  };
+
+  const signup = (username, extras = {}) => {
+    setUser({ username, provider: extras.provider || "local", email: extras.email || "" });
   };
 
   const logout = () => setUser(null);

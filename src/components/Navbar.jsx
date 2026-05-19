@@ -79,9 +79,14 @@ export default function Navbar() {
               </div>
             </div>
           ) : (
-            <Link to="/login" className="text-sm font-medium transition hover:text-black/70">
-              Login
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link to="/login" className="text-sm font-medium transition hover:text-black/70">
+                Login
+              </Link>
+              <Link to="/signup" className="text-sm font-medium text-black border border-black px-4 py-2 rounded-full transition hover:bg-black/10">
+                Sign up
+              </Link>
+            </div>
           )}
 
           <Link to="/products" className="bg-black text-white px-6 py-3 rounded-full">
