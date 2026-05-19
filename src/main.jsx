@@ -22,6 +22,7 @@ import Account from "./src/pages/account";
 import Orders from "./src/pages/orders";
 import Addresses from "./src/pages/addresses";
 import Contact from "./src/pages/contact";
+import NotFound from "./src/pages/notfound";
 import Navbar from "./components/Navbar";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -46,6 +47,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </FavoritesProvider>
         </CartProvider>
