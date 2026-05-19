@@ -31,9 +31,14 @@ export default function Login() {
           <a className="text-sm text-neutral-500" href="#">Forgot?</a>
         </div>
 
-        <p className="text-sm text-neutral-500 mb-4">New here? <Link to="/signup" className="text-black font-medium">Create an account</Link></p>
+        <div className="mb-6">
+          <p className="text-sm text-neutral-500 mb-3">New here?</p>
+          <Link to="/signup" className="inline-flex w-full items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-900">
+            Create an account
+          </Link>
+        </div>
         <div className="border-t border-neutral-200 pt-4 text-sm text-neutral-500">
-          Or sign up directly if you don’t have an account yet.
+          Or sign in if you already have an account.
         </div>
       </form>
     </div>

@@ -148,18 +148,25 @@ export default function App() {
 
           <div className="flex gap-5 mt-10 flex-wrap">
             <Link
-            to="/products"
-            className="bg-black text-white px-8 py-4 rounded-full hover:scale-105 transition"
-          >
-            Explore Collection
-          </Link>
+              to="/products"
+              className="bg-black text-white px-8 py-4 rounded-full hover:scale-105 transition"
+            >
+              Explore Collection
+            </Link>
 
-          <button
-            className="bg-white px-8 py-4 rounded-full border border-black/10"
-            onClick={() => setShowLookbook(true)}
-          >
-            View Lookbook
-          </button>
+            <Link
+              to="/signup"
+              className="bg-yellow-300 text-black px-8 py-4 rounded-full hover:scale-105 transition"
+            >
+              Sign up now
+            </Link>
+
+            <button
+              className="bg-white px-8 py-4 rounded-full border border-black/10"
+              onClick={() => setShowLookbook(true)}
+            >
+              View Lookbook
+            </button>
           </div>
         </div>
 
