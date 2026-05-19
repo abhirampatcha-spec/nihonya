@@ -54,26 +54,29 @@ export default function Navbar() {
                 aria-expanded={open}
               >
                 <span>{user.username || "Account"}</span>
-                <span className="text-xs">▾</span>
+                <span className={`text-xs transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"}`}>▾</span>
               </button>
 
-              {open && (
-                <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow-lg py-2 z-50">
-                  <Link to="/orders" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
-                    Orders
-                  </Link>
-                  <Link to="/addresses" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
-                    Addresses
-                  </Link>
-                  <Link to="/account" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
-                    Account
-                  </Link>
-                  <Link to="/contact" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
-                    Contact
-                  </Link>
-                  <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Sign out</button>
-                </div>
-              )}
+              <div
+                className={`absolute right-0 mt-2 w-44 bg-white border rounded shadow-lg py-2 z-50 transform origin-top-right transition-all duration-200 ease-out ${
+                  open ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"
+                }`}
+                aria-hidden={!open}
+              >
+                <Link to="/orders" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
+                  Orders
+                </Link>
+                <Link to="/addresses" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
+                  Addresses
+                </Link>
+                <Link to="/account" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
+                  Account
+                </Link>
+                <Link to="/contact" onClick={() => setOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50">
+                  Contact
+                </Link>
+                <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Sign out</button>
+              </div>
             </div>
           ) : (
             <Link to="/login" className="text-sm font-medium transition hover:text-black/70">
