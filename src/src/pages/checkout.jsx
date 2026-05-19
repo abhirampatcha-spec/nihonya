@@ -40,6 +40,17 @@ export default function Checkout() {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [form, setForm] = useState({ name: "", address: "", phone: "" });
   const [selectedOfferId, setSelectedOfferId] = useState(bankOffers[0].id);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("upi");
+  const [paymentStep, setPaymentStep] = useState("method");
+  const [paymentDetails, setPaymentDetails] = useState({
+    upiId: "",
+    cardNumber: "",
+    cardName: "",
+    expiry: "",
+    cvv: "",
+    emiPlan: "3 months",
+    bankName: "HDFC Bank",
+  });
 
   const selectedOffer = useMemo(
     () => bankOffers.find((offer) => offer.id === selectedOfferId) || bankOffers[0],
@@ -92,6 +103,37 @@ export default function Checkout() {
     if (!form.name || !form.address || !form.phone) {
       return alert("Please complete all shipping details before placing the order.");
     }
+    if (!selectedPaymentMethod) {
+      setPaymentStep("method");
+      return alert("Please select a payment method.");
+    }
+
+    const validPayment = () => {
+      if (selectedPaymentMethod === "upi") {
+        return paymentDetails.upiId.trim().length >= 3;
+      }
+      if (selectedPaymentMethod === "card") {
+        return (
+          paymentDetails.cardNumber.replace(/\D/g, "").length >= 12 &&
+          paymentDetails.cardName.trim().length > 0 &&
+          paymentDetails.expiry.trim().length === 5 &&
+          paymentDetails.cvv.replace(/\D/g, "").length === 3
+        );
+      }
+      if (selectedPaymentMethod === "emi") {
+        return paymentDetails.emiPlan.trim().length > 0 && paymentDetails.bankName.trim().length > 0;
+      }
+      if (selectedPaymentMethod === "netbanking") {
+        return paymentDetails.bankName.trim().length > 0;
+      }
+      return false;
+    };
+
+    if (!validPayment()) {
+      setPaymentStep("details");
+      return alert("Please fill the selected payment method details correctly.");
+    }
+
     clearCart();
     alert(`Order placed successfully! Total paid: ${formatINR(total)}`);
   };
@@ -190,12 +232,159 @@ export default function Checkout() {
               />
             </label>
 
-            <button
-              type="submit"
-              className="mt-6 w-full rounded-full bg-black px-10 py-5 text-white text-lg font-semibold"
-            >
-              Pay {formatINR(total)}
-            </button>
+            <div className="rounded-3xl border border-black/10 bg-[#F8F7F4] p-6 mt-6">
+              <p className="text-sm font-semibold text-neutral-700 mb-4">Select Payment Method</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { id: "upi", label: "UPI", description: "Pay instantly using UPI apps." },
+                  { id: "card", label: "Credit / Debit Card", description: "Visa, Mastercard, RuPay support." },
+                  { id: "emi", label: "EMI", description: "Split payment into easy EMIs." },
+                  { id: "netbanking", label: "Netbanking", description: "Pay using your bank account." },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPaymentMethod(option.id);
+                      setPaymentStep("details");
+                    }}
+                    className={`rounded-3xl border px-5 py-4 text-left transition ${
+                      selectedPaymentMethod === option.id ? "border-black bg-black text-white" : "border-black/10 bg-white text-black"
+                    }`}
+                  >
+                    <p className="font-semibold">{option.label}</p>
+                    <p className="text-sm text-neutral-500 mt-1">{option.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {paymentStep === "details" && (
+              <div className="rounded-3xl border border-black/10 bg-white p-6 mt-6">
+                <h3 className="text-lg font-semibold mb-4">{selectedPaymentMethod === "upi" ? "Pay with UPI" : selectedPaymentMethod === "card" ? "Card details" : selectedPaymentMethod === "emi" ? "EMI plan" : "Netbanking details"}</h3>
+                {selectedPaymentMethod === "upi" && (
+                  <label className="block mb-5">
+                    <span className="text-sm text-neutral-500">UPI ID</span>
+                    <input
+                      value={paymentDetails.upiId}
+                      onChange={(event) => setPaymentDetails({ ...paymentDetails, upiId: event.target.value })}
+                      type="text"
+                      className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                      placeholder="example@okaxis"
+                    />
+                  </label>
+                )}
+
+                {selectedPaymentMethod === "card" && (
+                  <>
+                    <label className="block mb-5">
+                      <span className="text-sm text-neutral-500">Card number</span>
+                      <input
+                        value={paymentDetails.cardNumber}
+                        onChange={(event) => setPaymentDetails({ ...paymentDetails, cardNumber: event.target.value })}
+                        type="text"
+                        className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                        placeholder="1234 5678 9012 3456"
+                      />
+                    </label>
+                    <label className="block mb-5">
+                      <span className="text-sm text-neutral-500">Name on card</span>
+                      <input
+                        value={paymentDetails.cardName}
+                        onChange={(event) => setPaymentDetails({ ...paymentDetails, cardName: event.target.value })}
+                        type="text"
+                        className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                        placeholder="CARDHOLDER NAME"
+                      />
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="block mb-5">
+                        <span className="text-sm text-neutral-500">Expiry</span>
+                        <input
+                          value={paymentDetails.expiry}
+                          onChange={(event) => setPaymentDetails({ ...paymentDetails, expiry: event.target.value })}
+                          type="text"
+                          className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                          placeholder="MM/YY"
+                        />
+                      </label>
+                      <label className="block mb-5">
+                        <span className="text-sm text-neutral-500">CVV</span>
+                        <input
+                          value={paymentDetails.cvv}
+                          onChange={(event) => setPaymentDetails({ ...paymentDetails, cvv: event.target.value })}
+                          type="password"
+                          className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                          placeholder="123"
+                        />
+                      </label>
+                    </div>
+                  </>
+                )}
+
+                {selectedPaymentMethod === "emi" && (
+                  <>
+                    <label className="block mb-5">
+                      <span className="text-sm text-neutral-500">Select bank</span>
+                      <select
+                        value={paymentDetails.bankName}
+                        onChange={(event) => setPaymentDetails({ ...paymentDetails, bankName: event.target.value })}
+                        className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                      >
+                        <option>HDFC Bank</option>
+                        <option>ICICI Bank</option>
+                        <option>SBI Card</option>
+                      </select>
+                    </label>
+                    <label className="block mb-5">
+                      <span className="text-sm text-neutral-500">EMI plan</span>
+                      <select
+                        value={paymentDetails.emiPlan}
+                        onChange={(event) => setPaymentDetails({ ...paymentDetails, emiPlan: event.target.value })}
+                        className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                      >
+                        <option>3 months</option>
+                        <option>6 months</option>
+                        <option>12 months</option>
+                      </select>
+                    </label>
+                  </>
+                )}
+
+                {selectedPaymentMethod === "netbanking" && (
+                  <label className="block mb-5">
+                    <span className="text-sm text-neutral-500">Select bank</span>
+                    <select
+                      value={paymentDetails.bankName}
+                      onChange={(event) => setPaymentDetails({ ...paymentDetails, bankName: event.target.value })}
+                      className="mt-3 w-full rounded-3xl border border-black/10 bg-[#F4F1EC] px-5 py-4 outline-none"
+                    >
+                      <option>HDFC Bank</option>
+                      <option>ICICI Bank</option>
+                      <option>SBI</option>
+                      <option>AXIS Bank</option>
+                      <option>PNB</option>
+                    </select>
+                  </label>
+                )}
+
+                <div className="flex flex-col gap-3 sm:flex-row items-stretch sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentStep("method")}
+                    className="w-full rounded-full border border-black/10 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-neutral-100"
+                  >
+                    Change payment method
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-full rounded-full bg-black px-6 py-3 text-sm font-semibold text-white transition hover:bg-neutral-900"
+                  >
+                    Pay {formatINR(total)}
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
 
           <div className="rounded-[40px] bg-white p-10 shadow-xl">
